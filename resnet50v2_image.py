@@ -41,8 +41,9 @@ model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combination
 
 model.compile(loss="categorical_crossentropy", optimizer=Adam(0.0001), metrics=["categorical_accuracy"])
 
-class_weights = compute_class_weight(class_weight="balanced", classes = classes1, y = pd.Series([file.split('_')[0] + "_" + file.split('_')[1] for file in files]))
-class_weights = dict(zip(classes1, class_weights))
+class_weights = compute_class_weight(class_weight="balanced", classes=classes1, y=pd.Series([file.split('_')[0] + "_" + file.split('_')[1] for file in files]))
+# class_weights = dict(zip(classes1, class_weights))
+class_weights = {i:class_weights for i,class_weights in enumerate(class_weights)}
 
 # Train model using defined tf.data.Datasets
 model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=10, class_weights=class_weights)
@@ -52,11 +53,6 @@ model.plot()
 
 # Evaluate performance on testing data
 model.evaluate(ds_test=ds_test)
-
-
-
-
-
 
 
 # OLD CODE 

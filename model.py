@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import pickle
+import matplotlib.pyplot as plt
 from tensorflow.keras.applications import ResNet50V2, VGG16
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Flatten, Dropout
@@ -13,7 +14,6 @@ from tensorflow.keras.preprocessing import image
 from typing import Union
 
 class TransferModel:
-
     def __init__(self, base: str, shape: tuple, classes: list, unfreeze: Union[list, str] = None):
         """
         Class for transfer learning from either VGG16 or ResNet
@@ -135,11 +135,7 @@ class TransferModel:
         """
         self.model.compile(**kwargs)
 
-    def train(self,
-              ds_train: tf.data.Dataset,
-              epochs: int,
-              ds_valid: tf.data.Dataset = None,
-              class_weights: np.array = None):
+    def train(self, ds_train: tf.data.Dataset, epochs: int, ds_valid: tf.data.Dataset = None, class_weights: np.array = None):
         """
         Trains model in ds_train with for epochs rounds
         Args:
@@ -152,19 +148,12 @@ class TransferModel:
         """
 
         # Define early stopping as callback
-        early_stopping = EarlyStopping(monitor='val_loss',
-                                       min_delta=0,
-                                       patience=12,
-                                       restore_best_weights=True)
+        early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=12, restore_best_weights=True)
 
         callbacks = [early_stopping]
 
         # Fitting
-        self.history = self.model.fit(ds_train,
-                                      epochs=epochs,
-                                      validation_data=ds_valid,
-                                      callbacks=callbacks,
-                                      class_weight=class_weights)
+        self.history = self.model.fit(ds_train, epochs=epochs, validation_data=ds_valid, callbacks=callbacks, class_weight=class_weights)
 
         return self.history
 
@@ -232,3 +221,35 @@ class TransferModel:
         img = img.reshape(-1, *img.shape)
         pred = self.predict(img, proba=False)
         return classes[pred[0]]
+
+    def plot(self, what: str = 'metric'):
+        """
+        Show a visualization of training and validation process
+    
+        Args:
+            what: Plot training loss or metric?
+        """
+    
+        if self.history is None:
+            AttributeError("No training history available, call TransferModel.train first")
+    
+        if what not in ['metric', 'loss']:
+            AttributeError(f'what must be either "loss" or "metric"')
+    
+        if what == 'metric':
+            metric = self.model.metrics_names[1]
+            y_1 = self.history.history[metric]
+            y_2 = self.history.history['val_' + metric]
+            y_label = metric
+        elif what == 'loss':
+            y_1 = self.history.history['loss']
+            y_2 = self.history.history['val_loss']
+            y_label = 'loss'
+    
+        plt.plot(y_1)
+        plt.plot(y_2)
+        plt.title('Model Performance')
+        plt.ylabel(y_label)
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Test'], loc='upper left')
+        plt.show()
