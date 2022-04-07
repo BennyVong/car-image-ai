@@ -54,6 +54,9 @@ model.plot()
 # Evaluate performance on testing data
 model.evaluate(ds_test=ds_test)
 
+ds_new = construct_ds(input_files=files_train, batch_size=32, classes=combinations_lower, input_size=(224, 224, 3), label_type='model', shuffle=True, augment=True)
+ds_batch = ds_new.take(1)
+predictions = model.predict(ds_batch)
 
 # OLD CODE 
 # # the combination folder contains a subfolder with class and then inside class is the images

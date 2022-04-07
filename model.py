@@ -32,10 +32,7 @@ class TransferModel:
         # Class allows for two base models (VGG16 oder ResNet)
         # Use pre-trained ResNet model
         if self.base == 'ResNet':
-            self.base_model = ResNet50V2(include_top=False,
-                                         input_shape=self.shape,
-                                         weights=None)
-                                         #weights='imagenet')
+            self.base_model = ResNet50V2(include_top=False, input_shape=self.shape, weights='imagenet')#weights=None)
 
             self.base_model.trainable = False
             if unfreeze is not None:
