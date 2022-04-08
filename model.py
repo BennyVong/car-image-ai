@@ -43,9 +43,7 @@ class TransferModel:
 
         # Use pre-trained VGG16
         elif self.base == 'VGG16':
-            self.base_model = VGG16(include_top=False,
-                                    input_shape=self.shape,
-                                    weights='imagenet')
+            self.base_model = VGG16(include_top=False, input_shape=self.shape, weights='imagenet')
 
             self.base_model.trainable = False
             if unfreeze is not None:
@@ -222,11 +220,9 @@ class TransferModel:
     def plot(self, what: str = 'metric'):
         """
         Show a visualization of training and validation process
-    
         Args:
             what: Plot training loss or metric?
         """
-    
         if self.history is None:
             AttributeError("No training history available, call TransferModel.train first")
     
@@ -238,15 +234,23 @@ class TransferModel:
             y_1 = self.history.history[metric]
             y_2 = self.history.history['val_' + metric]
             y_label = metric
-        elif what == 'loss':
-            y_1 = self.history.history['loss']
-            y_2 = self.history.history['val_loss']
-            y_label = 'loss'
-    
+        # elif what == 'loss':
+            y_3 = self.history.history['loss']
+            y_4 = self.history.history['val_loss']
+            y_label2 = 'loss'
+
+        plt.figure("Accuracy")
         plt.plot(y_1)
         plt.plot(y_2)
         plt.title('Model Performance')
         plt.ylabel(y_label)
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Test'], loc='upper left')
+        plt.figure("Loss")
+        plt.plot(y_3)
+        plt.plot(y_4)
+        plt.title('Model Loss')
+        plt.ylabel(y_label2)
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Test'], loc='upper left')
         plt.show()
