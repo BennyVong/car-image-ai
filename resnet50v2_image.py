@@ -1,9 +1,3 @@
-from unittest import loader
-from sklearn import datasets
-from torch.utils.data import DataLoader
-from PIL import Image
-import torch
-import torchvision
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 import os
@@ -11,6 +5,15 @@ from dataset_make import construct_ds, show_batch
 from model import TransferModel
 from tensorflow.keras.optimizers import Adam
 import pandas as pd
+
+import sys
+import pickle
+
+os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.6/bin")
+os.add_dll_directory("C:/Program Files/zlib123dllx64/dll_x64")
+
+mode = sys.argv[1]
+model_label = sys.argv[2]
 
 files = [file for file in os.listdir('./combinations/class') if file.endswith(".jpg")]
 file_paths = ['./combinations/class/' + file for file in files]
@@ -36,17 +39,29 @@ ds_test = construct_ds(input_files=files_test, batch_size=32, classes=combinatio
 # show_batch(ds_valid, car_combinations, size=plot_size, title='Validation data')
 # show_batch(ds_test, car_combinations, size=plot_size, title='Testing data')
 
-# Init base model and compile
-model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
+if mode == "train":
+    # Init base model and compile
+    model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
 
-model.compile(loss="categorical_crossentropy", optimizer=Adam(0.0001), metrics=["categorical_accuracy"])
+    model.compile(loss="categorical_crossentropy", optimizer=Adam(0.0001), metrics=["categorical_accuracy"])
 
-class_weights = compute_class_weight(class_weight="balanced", classes=classes1, y=pd.Series([file.split('_')[0] + "_" + file.split('_')[1] for file in files]))
-# class_weights = dict(zip(classes1, class_weights))
-class_weights = {i:class_weights for i,class_weights in enumerate(class_weights)}
+    class_weights = compute_class_weight(class_weight="balanced", classes=classes1, y=pd.Series([file.split('_')[0] + "_" + file.split('_')[1] for file in files]))
+    # class_weights = dict(zip(classes1, class_weights))
+    class_weights = {i:class_weights for i,class_weights in enumerate(class_weights)}
 
-# Train model using defined tf.data.Datasets
-model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=10, class_weights=class_weights)
+    # Train model using defined tf.data.Datasets
+    model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=10, class_weights=class_weights)
+    
+    # Save model to file
+    file = open(model_label + ".model", "wb")
+    pickle.dump(model, file)
+    file.close
+
+elif mode == "test": 
+    file = open(model_label + ".model", 'rb')
+    model = pickle.load(file)
+    file.close
+
 
 # Plot accuracy on training and validation data sets
 model.plot()
