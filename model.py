@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import pickle
+import random
 import matplotlib.pyplot as plt
 from tensorflow.keras.applications import ResNet50V2, VGG16
 from tensorflow.keras import Model
@@ -130,7 +131,7 @@ class TransferModel:
         """
         self.model.compile(**kwargs)
 
-    def train(self, ds_train: tf.data.Dataset, epochs: int, ds_valid: tf.data.Dataset = None, class_weights: np.array = None):
+    def train(self, ds_train: tf.data.Dataset, epochs: int, ds_valid: tf.data.Dataset = None, class_weights: np.array = None, model_label = random.randint(0,10000)):
         """
         Trains model in ds_train with for epochs rounds
         Args:
@@ -143,9 +144,18 @@ class TransferModel:
         """
 
         # Define early stopping as callback
-        early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=12, restore_best_weights=True)
+        # early_stopping = EarlyStopping(monitor='categorical_accuracy', min_delta=0.05, patience=1, restore_best_weights=False)
+        
+        checkpoint_filepath = 'checkpoints/' + model_label
+        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+                                    filepath=checkpoint_filepath,
+                                    save_weights_only=False,
+                                    monitor='categorical_accuracy',
+                                    mode='max',
+                                    save_best_only=True)
 
-        callbacks = [early_stopping]
+
+        callbacks = [model_checkpoint_callback]
 
         # Fitting
         self.history = self.model.fit(ds_train, epochs=epochs, validation_data=ds_valid, callbacks=callbacks, class_weight=class_weights)

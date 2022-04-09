@@ -24,10 +24,12 @@ def get_label(filename: str, label_type: str = 'make'):
     if label_type == 'make':
         return tf.strings.lower(label[0])
     # Model is the second element of the filename; model and make have to be combined
-    elif label_type == 'model':
+    elif label_type == 'makemodel':
         return tf.strings.lower(label[0] + '_' + label[1])
+    elif label_type == 'makemodelyear':
+        return tf.strings.lower(label[0] + '_' + label[1] + '_' + label[2])
     else:
-        raise ValueError('label must be either "make" or "model" and not ', label_type)
+        raise ValueError('label must be either "make" or "makemodel" or "makemodelyear" and not ', label_type)
 
 def get_image(filename: str, size: tuple = (212, 320)):
     """
