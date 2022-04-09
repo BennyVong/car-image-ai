@@ -12,6 +12,8 @@ import pickle
 os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.6/bin")
 os.add_dll_directory("C:/Program Files/zlib123dllx64/dll_x64")
 
+sys.setrecursionlimit(10000)
+
 mode = sys.argv[1]
 model_label = sys.argv[2]
 
