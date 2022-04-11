@@ -1,19 +1,15 @@
+import os
+import sys
+
+import numpy
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-import os
+from tensorflow.keras.models import load_model
+from tensorflow.keras.optimizers import Adam
+
 from dataset_make import construct_ds, show_batch
 from model import TransferModel
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.models import load_model
-import matplotlib.pyplot as plt
-import numpy
-
-import pandas as pd
-
-import sys
-import pickle
-
-
 
 mode = sys.argv[1]
 model_label = sys.argv[2]
@@ -27,7 +23,6 @@ car_combinations = ['Mercedes-Benz_GLC Class', 'Ford_Edge', 'Maserati_Ghibli', '
                     'Nissan_Leaf', 'Honda_Pilot', 'Volkswagen_Atlas', 'Lincoln_MKC', 'Mercedes-Benz_S Class', 'Kia_K900', 'Toyota_Sequoia', 'Hyundai_Accent', 'Mercedes-Benz_C Class', 'Porsche_Panamera', 'Volkswagen_Golf', 'Chevrolet_Equinox', 'Chevrolet_TrailBlazer', 'Volvo_XC60', 'Audi_A7', 'Lexus_GS', 'Dodge_Charger', 'Acura_RLX', 'Honda_CR-V', 'Land Rover_Range Rover Velar', 'Dodge_Journey', 'BMW_i3', 'FIAT_500', 'Lamborghini_Aventador', 'Lincoln_MKT', 'Genesis_G70', 'Audi_A6', 'Bentley_Flying Spur', 'Hyundai_Tucson', 'Ford_Transit Connect Wagon', 'McLaren_720S', 'Ford_Ecosport', 'Alfa Romeo_Stelvio', 'Jaguar_XF', 'Porsche_Cayenne', 'Lamborghini_Urus', 'Lexus_RC', 'BMW_4-Series', 'INFINITI_QX60', 'Acura_RDX', 'MINI_Cooper', 'Chevrolet_Blazer', 'Jaguar_F-Pace', 'Mazda_CX-5', 'Audi_Q7', 'Subaru_Impreza', 'Volkswagen_Tiguan', 'Land Rover_Discovery', 'Kia_Soul', 'Toyota_RAV4', 'Volvo_V60', 'Porsche_Macan', 'Land Rover_Range Rover', 'Mercedes-Benz_GLE Class', 'BMW_X3', 'FIAT_124 Spider', 'Subaru_BRZ', 'Toyota_Sienna', 'Jeep_Grand Cherokee', 'Dodge_Durango', 'Kia_Sedona', 'Honda_Passport', 'Rolls-Royce_Ghost', 'Volkswagen_Jetta', 'Hyundai_Sonata', 'Acura_NSX', 'Cadillac_CT5', 'Toyota_Highlander', 'Tesla_Model S', 'Hyundai_NEXO', 'Bentley_Continental GT', 'Ford_Mustang', 'Lexus_RX', 'Chevrolet_Sonic', 'Chevrolet_Trax', 'Aston Martin_DB11', 'Rolls-Royce_Phantom', 'Nissan_Pathfinder', 'Ford_Explorer', 'BMW_X4', 'Mercedes-Benz_Metris', 'INFINITI_QX80', 'Lincoln_MKZ', 'Maserati_GranTurismo', 'Mazda_CX-3', 'FIAT_500L', 'Mitsubishi_Outlander Sport', 'Hyundai_Veloster', 'Land Rover_Defender', 'Genesis_G90', 'Toyota_Yaris', 'Chevrolet_Suburban', 'Nissan_370Z', 'BMW_X5', 'Ram_2500', 'INFINITI_Q50', 'BMW_X2', 'Mercedes-Benz_SLC Class', 'Lexus_GX', 'Mercedes-Benz_CLS Class', 'Audi_A4', 'Ford_Taurus', 'Toyota_Land Cruiser', 'Kia_Sorento', 'Lexus_LC', 'BMW_Z4', 'GMC_Sierra 2500HD', 'Jeep_Gladiator', 'BMW_X7', 'Chevrolet_Impala', 'Rolls-Royce_Cullinan', 'Lexus_UX', 'Rolls-Royce_Dawn', 'Hyundai_Palisade', 'Chrysler_Pacifica', 'Mazda_CX-9', 'Toyota_C-HR', 'Lamborghini_Huracan', 'Buick_Enclave', 'Mazda_MAZDA6', 'GMC_Acadia', 'Subaru_Legacy', 'Aston Martin_Vantage', 'Mitsubishi_Outlander', 'Kia_Optima', 'MINI_Cooper Countryman', 'Kia_Niro', 'smart_fortwo', 'Alfa Romeo_4C Spider', 'Subaru_Ascent', 'Chevrolet_Bolt EV', 'Jeep_Cherokee', 'Buick_Envision', 'Kia_Rio', 'GMC_Sierra 1500', 'Toyota_Supra', 'Nissan_Rogue', 'Kia_Forte', 'Honda_HR-V', 'Lexus_LX', 'BMW_3-Series', 'GMC_Canyon',
                     'Chevrolet_Malibu', 'Audi_Q3', 'Maserati_Quattroporte', 'Hyundai_Elantra', 'FIAT_500X', 'BMW_X1', 'Jeep_Compass', 'Subaru_Forester', 'Chevrolet_Silverado 2500HD', 'Acura_MDX', 'GMC_Terrain',
                     'INFINITI_QX30', 'BMW_8-Series', 'Cadillac_ATS', 'Ford_Super Duty F-250', 'INFINITI_QX50', 'Mazda_MAZDA3', 'Nissan_Versa', 'Honda_Accord', 'Cadillac_XTS', 'Mitsubishi_Mirage', 'Lincoln_Aviator', 'Alfa Romeo_Giulia', 'Honda_Fit', 'Ford_Ranger', 'Kia_Cadenza', 'Tesla_Model Y', 'Audi_A3', 'Honda_Clarity', 'Porsche_718', 'Chevrolet_Cruze', 'Hyundai_Venue', 'Mazda_Mazda3 Hatchback', 'Chevrolet_Corvette', 'Ford_Fiesta', 'Toyota_86', 'MINI_Clubman', 'Jaguar_F-Type', 'Cadillac_CT6', 'Nissan_Frontier', 'Mazda_MX-5 Miata', 'Toyota_Corolla', 'Jeep_Wrangler', 'Tesla_Model 3', 'Buick_Lacrosse', 'Toyota_Tacoma', 'Ferrari_Portofino', 'Toyota_Prius', 'Audi_A8', 'Mercedes-Benz_GLS Class', 'Nissan_Murano', 'Toyota_Mirai', 'Kia_Stinger', 'Jaguar_XE', 'Mitsubishi_Eclipse Cross', 'Cadillac_CT4', 'Mercedes-Benz_A Class', 'Mercedes-Benz_GLB Class', 'Land Rover_Range Rover Evoque', 'Lincoln_Continental', 'Nissan_NV200', 'Toyota_Prius C', 'Volkswagen_Arteon', 'Jeep_Renegade', 'Lexus_ES', 'Audi_e-tron', 'Audi_Q5', 'Audi_TT', 'Nissan_Sentra', 'Dodge_Challenger', 'Cadillac_CTS', 'Aston Martin_DBS', 'Mercedes-Benz_AMG GT', 'Nissan_Armada', 'Volvo_V90', 'Volkswagen_e-Golf', 'Toyota_Camry', 'Toyota_Yaris Hatchback', 'Volvo_S90', 'Buick_Cascada', 'Kia_Soul EV', 'Buick_Encore', 'Mercedes-Benz_CLA Class', 'McLaren_570GT']
-
 
 classes1 = list(set([file.split('_')[0] + '_' + file.split('_')[1] for file in files]))
 
@@ -55,7 +50,7 @@ if mode == "train":
     sys.setrecursionlimit(10000)
     
     # Init base model and compile
-    model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
+    model = TransferModel(base='VGG16', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
 
     model.compile(loss="categorical_crossentropy", optimizer=Adam(0.0001), metrics=["categorical_accuracy"])
 
@@ -64,7 +59,7 @@ if mode == "train":
     class_weights = {i:class_weights for i,class_weights in enumerate(class_weights)}
 
     # Train model using defined tf.data.Datasets
-    model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=10, class_weights=class_weights, model_label=model_label)
+    model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=40, class_weights=class_weights, model_label=model_label)
     
     # Save model to file
     model.save(model_label)
@@ -120,8 +115,6 @@ elif mode == "test_single_image":
     
     exit()
     
-
-
 # Plot accuracy on training and validation data sets
 model.plot()
 

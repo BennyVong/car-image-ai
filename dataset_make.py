@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-
 from tensorflow.keras.applications.resnet_v2 import preprocess_input
+
 
 def get_label(filename: str, label_type: str = 'make'):
     """

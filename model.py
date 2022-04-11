@@ -1,18 +1,19 @@
-import re
 import os
+import pickle
+import random
+import re
+from typing import Union
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import pickle
-import random
-import matplotlib.pyplot as plt
-from tensorflow.keras.applications import ResNet50V2, VGG16
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Flatten, Dropout
+from tensorflow.keras.applications import VGG16, ResNet50V2
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import (Dense, Dropout, Flatten, GlobalAveragePooling2D)
 from tensorflow.keras.preprocessing import image
 
-from typing import Union
 
 class TransferModel:
     def __init__(self, base: str, shape: tuple, classes: list, unfreeze: Union[list, str] = None):
@@ -52,10 +53,11 @@ class TransferModel:
 
             add_to_base = self.base_model.output
             add_to_base = Flatten(name='head_flatten')(add_to_base)
-            add_to_base = Dense(1024, activation='relu', name='head_fc_1')(add_to_base)
             add_to_base = Dropout(0.3, name='head_drop_1')(add_to_base)
-            add_to_base = Dense(1024, activation='relu', name='head_fc_2')(add_to_base)
+            add_to_base = Dense(1024, activation='relu', name='head_fc_1')(add_to_base)
             add_to_base = Dropout(0.3, name='head_drop_2')(add_to_base)
+            add_to_base = Dense(1024, activation='relu', name='head_fc_2')(add_to_base)
+            
 
         # Add final output layer
         new_output = Dense(len(self.classes), activation='softmax', name='head_pred')(add_to_base)
@@ -147,13 +149,7 @@ class TransferModel:
         # early_stopping = EarlyStopping(monitor='categorical_accuracy', min_delta=0.05, patience=1, restore_best_weights=False)
         
         checkpoint_filepath = 'checkpoints/' + model_label
-        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-                                    filepath=checkpoint_filepath,
-                                    save_weights_only=False,
-                                    monitor='categorical_accuracy',
-                                    mode='max',
-                                    save_best_only=True)
-
+        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath, save_weights_only=False, monitor='categorical_accuracy', mode='max', save_best_only=True)
 
         callbacks = [model_checkpoint_callback]
 
