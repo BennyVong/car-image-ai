@@ -11,8 +11,7 @@ import numpy
 import pandas as pd
 
 import sys
-import pickle
-
+from price_model import predict_price
 
 
 mode = sys.argv[1]
@@ -40,13 +39,6 @@ ds_train = construct_ds(input_files=files_train, batch_size=32, classes=combinat
 ds_valid = construct_ds(input_files=files_valid, batch_size=32, classes=combinations_lower, input_size=(224, 224, 3),label_type='makemodel', shuffle=False, augment=False)
 ds_test = construct_ds(input_files=files_test, batch_size=32, classes=combinations_lower, input_size=(224, 224, 3),label_type='makemodel', shuffle=False, augment=False)
 
-# # Show examples from one batch
-# plot_size = (18, 18)
-
-# show_batch(ds_train, car_combinations, size=plot_size, title='Training data')
-# show_batch(ds_valid, car_combinations, size=plot_size, title='Validation data')
-# show_batch(ds_test, car_combinations, size=plot_size, title='Testing data')
-
 if mode == "train":
     
     os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.6/bin")
@@ -73,8 +65,56 @@ elif mode == "test":
     model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
 
     model.load("./"+model_label+"/")
+    
+    files_test2 = files_test
+    for file in files_test:
+        if 'nan' in file:
+            files_test2.remove(file)
+    files_test = files_test2
+    files_test2 = files_test
+    for file in files_test:
+        if 'nan' in file:
+            files_test2.remove(file)
 
-    model.evaluate(ds_test)
+    files_test = files_test2
+
+    entries = list([list([file.split('_')[0] + "_" + file.split('_')[1], file.split('_')[3]]) for file in files_test])
+
+    ds_test = construct_ds(input_files=files_test, batch_size=32, classes=combinations_lower, input_size=(224, 224, 3),label_type='makemodel', shuffle=False, augment=False)
+    
+    prices = list([file.split('_')[3] for file in files_test])
+    
+    actual_prices = list([int(price) for price in prices])    
+    
+    predictions = model.predict(ds_test)
+
+    fixed_predictions = []
+
+    for prediction in predictions: 
+        max_item = max(prediction)
+        highest = numpy.where(prediction == max_item)
+        fixed_predictions.append(car_combinations[int(highest[-1])])
+    
+    index_predictions = list([int(car_combinations.index(model)) for model in fixed_predictions])
+    index_predictions = numpy.array(index_predictions)
+    
+    price_predictions = predict_price('price_kneighbors_label', index_predictions)
+    total = 0
+    correct = 0 
+    percent_errors = []
+    for price_prediction in price_predictions:
+        if (price_prediction/(actual_prices[total])) >= 0.80 and (price_prediction/(actual_prices[total])) <= 1.20:
+            correct += 1 
+        error = price_prediction/actual_prices[total]
+        if error < 1:
+            error = 1-error
+        else:
+            error = error - 1
+        percent_errors.append(error)
+        total += 1
+    print(correct/total + "%" + " accuracy (+-20%)")
+    print("Average price prediction deviation:", sum(percent_errors)/total)
+    
     exit()
 
 elif mode == "load_checkpoint":  
@@ -96,25 +136,47 @@ elif mode == "test_single_image":
     model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
 
     model.load("./"+model_label+"/")
+    path = "./combinations/class/"
+    file_name = "Acura_RDX_2019_39_19_270_20_4_74_65_186_21_AWD_5_4_SUV_bOs.jpg"
+    file = path+file_name
+    files_single = [file]
 
-    ds_new = construct_ds(input_files=files_train, batch_size=1, classes=combinations_lower, input_size=(224, 224, 3), label_type='makemodel', shuffle=True, augment=False)
+    ds_new = construct_ds(input_files=files_single, batch_size=1, classes=combinations_lower, input_size=(224, 224, 3), label_type='makemodel', shuffle=False, augment=False)
     
     ds_batch = ds_new.take(1)
+    
+    # ds_load = parse_file("./combinations/class/Aston Martin_Vantage_2011_191_19_510_59_12_73_49_172_11_RWD_2_2_2dr_Kkn.jpg", classes=combinations_lower, input_size=(224, 224, 3), label_type='makemodel')
+    # print(ds_load)
+    # plot_size = (18, 18)
+    # show_batch(ds_batch, car_combinations, size=plot_size, title="test1")
     # print(ds_batch)
     
-    # for images, labels in ds_test.take(1):  # only take first element of dataset
+    # for images, labels in ds_batch:  # only take first element of dataset
     #     numpy_images = images.numpy()
     #     numpy_labels = labels.numpy()
-    # print(numpy_labels[0])
+    # print(numpy_labels)
+    # max2 = max(numpy_labels[0])
+    # highest = numpy.where(numpy_labels[0] == max2)
+    # print(highest)
+    # print(highest[-1])
+    # print(int(highest[-1]))
+    # print(car_combinations[highest[1]])
+    # prediction = combinations_lower[int(highest[-1])]
+    # print(prediction)
     
     predictions = model.predict(ds_batch)
     
-    max = max(predictions[0])
+    # prediction = numpy.argmax(predictions, axis=-1)
+    
+    max = max(predictions[-1])
     highest = numpy.where(predictions == max)
-    print(highest[1])
-    print(int(highest[1]))
-    print(car_combinations[int(highest[1])])
-    prediction = car_combinations[int(highest[1])]
+    print(highest)
+    print(highest[-1])
+    print(int(highest[-1]))
+    
+    # print(car_combinations[highest[1]])
+    prediction = car_combinations[int(highest[-1])]
+    print(prediction)
     plot_size = (18, 18)
     show_batch(ds_batch, car_combinations, size=plot_size, title=prediction)
     
