@@ -1,16 +1,11 @@
 import os
-from typing import final
 from sklearn.model_selection import train_test_split
-from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 import pickle
 import numpy
-import sklearn
 import sys
-import pandas
 
 def import_data():
     car_combinations = ['Mercedes-Benz_GLC Class', 'Ford_Edge', 'Maserati_Ghibli', 'Mercedes-Benz_E Class', 'GMC_Yukon', 'Honda_Ridgeline', 'Porsche_911', 'Ferrari_488 GTB', 'Lexus_LS', 'Dodge_Grand Caravan', 'Mercedes-Benz_EQC', 'Subaru_Crosstrek', 'Kia_Sportage', 'Hyundai_Ioniq', 'Hyundai_Kona Electric', 'Toyota_4Runner', 'Acura_TLX', 'Land Rover_Discovery Sport', 'Honda_Civic', 'FIAT_500e', 'Mercedes-Benz_G Class', 'Volvo_XC40', 'Honda_Odyssey', 'Honda_Insight', 'Ford_Fusion', 'Nissan_GT-R', 'Toyota_Tundra', 'BMW_2-Series', 'Lincoln_Nautilus', 'Volvo_S60', 'Kia_Telluride', 'Aston Martin_Vanquish', 'Nissan_Altima', 'Chevrolet_Traverse', 'Tesla_Model X', 'Nissan_Maxima', 'Subaru_Outback', 'BMW_5-Series', 'Mercedes-Benz_SL Class', 'Bentley_Mulsanne', 'Alfa Romeo_4C', 'Lincoln_Corsair', 'Audi_R8', 'BMW_6-Series', 'Porsche_Taycan', 'Jaguar_XJ', 'Ferrari_GTC4Lusso', 'Chevrolet_Volt', 'Chevrolet_Tahoe', 'Chrysler_300', 'Ford_Expedition', 'Rolls-Royce_Wraith', 'Chevrolet_Spark', 'Subaru_STI S209', 'Lincoln_Navigator', 'Jaguar_E-Pace', 'Volkswagen_Beetle', 'Audi_Q8', 'Lexus_IS', 'BMW_i8', 'Volvo_XC90', 'Ford_Flex', 'Acura_ILX', 'Nissan_Rogue Sport', 'Cadillac_XT4', 'Chevrolet_Colorado', 'Jaguar_I-Pace', 'INFINITI_Q60', 'Mazda_CX-30', 'Hyundai_Kona', 'Toyota_Avalon', 'Maserati_Levante', 'BMW_X6', 'Nissan_Titan', 'Porsche_718 Spyder', 'Ford_Escape', 'Nissan_Kicks', 'Chevrolet_Camaro', 'Subaru_WRX', 'Buick_Regal', 'Audi_A5', 'BMW_7-Series', 'Hyundai_Santa Fe', 'Bentley_Bentayga', 'INFINITI_Q70', 'McLaren_570S', 'Cadillac_Escalade', 'Cadillac_XT6', 'Cadillac_XT5', 'Chevrolet_Silverado 1500', 'Ram_1500', 'Ford_F-150', 'Lexus_NX', 'Genesis_G80', 'Mercedes-Benz_GLA Class', 'Volkswagen_Passat', 'Land Rover_Range Rover Sport',
@@ -26,8 +21,6 @@ def import_data():
     for entry in list(entries):
         if 'nan' in entry[0] or 'nan' in entry[1]:
             entries.remove(entry)
-
-
 
     x, y = list([str(entry[0]) for entry in entries]), list([int(entry[1]) for entry in entries])
 
@@ -87,12 +80,10 @@ def train(model_name):
     ax = fig.add_subplot(111)
     differences = list(counts.keys())
     counts_graphed = list(counts.values())
-    # ax.bar(differences, counts_graphed)
     ax.set_ylabel('Number of Predictions')
     ax.set_xlabel('Prediction/Actual Ratio')
 
     ax.set_title('Number of Predictions for each Ratio')
-    # plt.bar(differences, counts_graphed, align='edge', width=0.01)
     plt.bar(differences, height=counts_graphed, width=0.01)
     plt.show()
     

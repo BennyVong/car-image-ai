@@ -13,7 +13,6 @@ import pandas as pd
 import sys
 from price_model import predict_price
 
-
 mode = sys.argv[1]
 model_label = sys.argv[2]
 
@@ -46,20 +45,26 @@ if mode == "train":
 
     sys.setrecursionlimit(10000)
     
-    # Init base model and compile
     model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
 
     model.compile(loss="categorical_crossentropy", optimizer=Adam(0.0001), metrics=["categorical_accuracy"])
 
     class_weights = compute_class_weight(class_weight="balanced", classes=classes1, y=pd.Series([file.split('_')[0] + "_" + file.split('_')[1] for file in files]))
-    # class_weights = dict(zip(classes1, class_weights))
     class_weights = {i:class_weights for i,class_weights in enumerate(class_weights)}
 
-    # Train model using defined tf.data.Datasets
     model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=10, class_weights=class_weights, model_label=model_label)
     
-    # Save model to file
     model.save(model_label)
+
+    model.plot()
+
+    model.evaluate(ds_test=ds_test)
+
+    ds_new = construct_ds(input_files=files_train, batch_size=32, classes=combinations_lower, input_size=(
+        224, 224, 3), label_type='makemodel', shuffle=True, augment=True)
+    ds_batch = ds_new.take(1)
+    predictions = model.predict(ds_batch)
+
 
 elif mode == "test": 
     model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
@@ -89,14 +94,19 @@ elif mode == "test":
     predictions = model.predict(ds_test)
 
     fixed_predictions = []
-
-    for prediction in predictions: 
+    for prediction in predictions:
         max_item = max(prediction)
         highest = numpy.where(prediction == max_item)
         fixed_predictions.append(car_combinations[int(highest[-1])])
     
     index_predictions = list([int(car_combinations.index(model)) for model in fixed_predictions])
     index_predictions = numpy.array(index_predictions)
+    
+    i = 0
+    differences = []
+    perfect = 0
+    counts = {}
+
     
     price_predictions = predict_price('price_kneighbors_label', index_predictions)
     total = 0
@@ -112,8 +122,145 @@ elif mode == "test":
             error = error - 1
         percent_errors.append(error)
         total += 1
-    print(correct/total + "%" + " accuracy (+-20%)")
+        
+        difference = actual_prices[i] / price_prediction
+        differences.append(difference)
+        if difference == 1:
+            perfect += 1
+        i += 1
+        if difference in counts:
+            counts[difference] += 1
+        else:
+            counts[difference] = 1
+            
+    print("average difference:", sum(differences)/len(differences))
+    print("highest overestimate:", max(differences))
+    print("lowest underestimate:", min(differences))
+    print("perfect estimates", perfect, "/", len(differences))
+    
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    differences = list(counts.keys())
+    counts_graphed = list(counts.values())
+    ax.set_ylabel('Number of Predictions')
+    ax.set_xlabel('Prediction/Actual Ratio')
+
+    ax.set_title('Number of Predictions for each Ratio')
+    plt.bar(differences, height=counts_graphed, width=0.01)
+    plt.axis([0, 2, 0, 2500])
+    plt.show()
+
+    print(str(correct/total) + "%" + " accuracy (+-20%)")
     print("Average price prediction deviation:", sum(percent_errors)/total)
+    
+    exit()
+    
+elif mode == "test_experiment":
+    path = sys.argv[3]
+    model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
+    model.load("./"+model_label+"/")
+    path = './imageExperiments/' + path 
+    files = [file for file in os.listdir(path) if file.endswith(".jpg")]
+    file_paths = [(path + "/" + file) for file in files]
+    
+    ds_experiment = construct_ds(input_files=file_paths, batch_size=32, classes=combinations_lower, input_size=(224, 224, 3),label_type='makemodel', shuffle=False, augment=False)
+    
+    prices = list([file.split('_')[3] for file in file_paths])
+    make_models = list([file.split('_')[0] + "_" + file.split('_')[1]for file in file_paths])
+    make_models = list([file.split('/')[-1] for file in make_models])
+    
+    actual_prices = list([int(price) for price in prices])    
+    
+    model.evaluate(ds_experiment)
+    
+    predictions = model.predict(ds_experiment)
+
+    fixed_predictions = []
+    for prediction in predictions:
+        max_item = max(prediction)
+        highest = numpy.where(prediction == max_item)
+        fixed_predictions.append(car_combinations[int(highest[-1])])
+    
+    index_predictions = list([int(car_combinations.index(model)) for model in fixed_predictions])
+    index_predictions = numpy.array(index_predictions)
+    print()
+    print(actual_prices[0:10])
+    
+    i = 0
+    differences = []
+    perfect = 0
+    counts = {}
+
+    
+    price_predictions = predict_price('price_kneighbors_label', index_predictions)
+    print(price_predictions[0:10])
+    total = 0
+    correct = 0 
+    percent_errors = []
+    for price_prediction in price_predictions:
+        if (price_prediction/(actual_prices[total])) >= 0.80 and (price_prediction/(actual_prices[total])) <= 1.20:
+            correct += 1 
+        error = price_prediction/actual_prices[total]
+        if error < 1:
+            error = 1-error
+        else:
+            error = error - 1
+        percent_errors.append(error)
+        total += 1
+        
+        difference = actual_prices[i] / price_prediction
+        differences.append(difference)
+        if difference == 1:
+            perfect += 1
+        i += 1
+        if difference in counts:
+            counts[difference] += 1
+        else:
+            counts[difference] = 1
+            
+    print("average difference:", sum(differences)/len(differences))
+    print("highest overestimate:", max(differences))
+    print("lowest underestimate:", min(differences))
+    print("perfect estimates", perfect, "/", len(differences))
+    
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    differences = list(counts.keys())
+    counts_graphed = list(counts.values())
+    ax.set_ylabel('Number of Predictions')
+    ax.set_xlabel('Prediction/Actual Ratio')
+
+    ax.set_title('Number of Predictions for each Ratio')
+    plt.bar(differences, height=counts_graphed, width=0.01)
+    plt.axis([0, 2, 0, 15])
+    plt.show()
+
+    print(str(correct/total) + "%" + " accuracy (+-20%)")
+    print("Average price prediction deviation:", sum(percent_errors)/total)
+    
+    plot_size = (18, 18)
+    imageNum = 0
+    counter = 0
+    for prediction in index_predictions:
+        if (make_models[imageNum] == car_combinations[index_predictions[imageNum]] and int(prices[imageNum]) == int(price_predictions[imageNum])):
+            if counter > 0:
+                print("Actual:", make_models[imageNum])
+                print("Predicted:", car_combinations[index_predictions[imageNum]])
+                print("Actual Price:", prices[imageNum])
+                print("Predicted Price: ", price_predictions[imageNum])
+                title = ("Predicted Car: " + car_combinations[index_predictions[imageNum]] + "\n" + 
+                        "Actual Price: " + str(prices[imageNum]) + ",000\n" + 
+                        "Predicted Price: " + str(price_predictions[imageNum]) + ",000")
+                
+                ds_one = construct_ds(input_files=[file_paths[imageNum]], batch_size=1, classes=combinations_lower, input_size=(224, 224, 3), label_type='makemodel', shuffle=False, augment=False)
+                ds_batch = ds_one.take(1)
+                show_batch(ds_batch, car_combinations, size=plot_size, title=title)
+                break
+            else: 
+                counter += 1
+        imageNum += 1 
     
     exit()
 
@@ -125,93 +272,7 @@ elif mode == "load_checkpoint":
     predictions = model.predict(ds_batch)
     plot_size = (18, 18)
     show_batch(ds_batch, car_combinations, size=plot_size, title='Test')
-    
-    # prediction = max(predictions[0])
-    
+        
     predicted_class = numpy.argmax(predictions, axis=-1)
     print(predicted_class)
     exit()
-    
-elif mode == "test_single_image":
-    model = TransferModel(base='ResNet', shape=(224, 224, 3),classes=car_combinations, unfreeze='all')
-
-    model.load("./"+model_label+"/")
-    path = "./combinations/class/"
-    file_name = "Acura_RDX_2019_39_19_270_20_4_74_65_186_21_AWD_5_4_SUV_bOs.jpg"
-    file = path+file_name
-    files_single = [file]
-
-    ds_new = construct_ds(input_files=files_single, batch_size=1, classes=combinations_lower, input_size=(224, 224, 3), label_type='makemodel', shuffle=False, augment=False)
-    
-    ds_batch = ds_new.take(1)
-    
-    # ds_load = parse_file("./combinations/class/Aston Martin_Vantage_2011_191_19_510_59_12_73_49_172_11_RWD_2_2_2dr_Kkn.jpg", classes=combinations_lower, input_size=(224, 224, 3), label_type='makemodel')
-    # print(ds_load)
-    # plot_size = (18, 18)
-    # show_batch(ds_batch, car_combinations, size=plot_size, title="test1")
-    # print(ds_batch)
-    
-    # for images, labels in ds_batch:  # only take first element of dataset
-    #     numpy_images = images.numpy()
-    #     numpy_labels = labels.numpy()
-    # print(numpy_labels)
-    # max2 = max(numpy_labels[0])
-    # highest = numpy.where(numpy_labels[0] == max2)
-    # print(highest)
-    # print(highest[-1])
-    # print(int(highest[-1]))
-    # print(car_combinations[highest[1]])
-    # prediction = combinations_lower[int(highest[-1])]
-    # print(prediction)
-    
-    predictions = model.predict(ds_batch)
-    
-    # prediction = numpy.argmax(predictions, axis=-1)
-    
-    max = max(predictions[-1])
-    highest = numpy.where(predictions == max)
-    print(highest)
-    print(highest[-1])
-    print(int(highest[-1]))
-    
-    # print(car_combinations[highest[1]])
-    prediction = car_combinations[int(highest[-1])]
-    print(prediction)
-    plot_size = (18, 18)
-    show_batch(ds_batch, car_combinations, size=plot_size, title=prediction)
-    
-    exit()
-    
-
-
-# Plot accuracy on training and validation data sets
-model.plot()
-
-# Evaluate performance on testing data
-model.evaluate(ds_test=ds_test)
-
-ds_new = construct_ds(input_files=files_train, batch_size=32, classes=combinations_lower, input_size=(224, 224, 3), label_type='makemodel', shuffle=True, augment=True)
-ds_batch = ds_new.take(1)
-predictions = model.predict(ds_batch)
-
-# OLD CODE 
-# # the combination folder contains a subfolder with class and then inside class is the images
-# dataset = torchvision.datasets.ImageFolder(root = './combinations')
-# print(len(dataset))
-# print(dataset.samples[0][0])
-
-# val_size = int(len(dataset)*0.001)
-# train_size = len(dataset)- int(len(dataset)*0.001)
-# train_set, val_set = torch.utils.data.random_split(dataset, [train_size, val_size])
-# print(len(train_set))
-# print(len(val_set))
-
-# print(val_set.indices)
-# print(len(val_set.indices))
-
-# file_list=os.listdir(r'./combinations/class')
-# name = file_list[val_set.indices[0]]
-# brand = name.split('_')
-# brand = brand[0]
-# print(file_list[val_set.indices[0]])
-# print(brand)
