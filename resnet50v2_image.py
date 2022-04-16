@@ -40,7 +40,9 @@ class_weights = compute_class_weight(class_weight="balanced", classes=classes1, 
 # class_weights = dict(zip(classes1, class_weights))
 class_weights = {i:class_weights for i,class_weights in enumerate(class_weights)}
 
-model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=10, class_weights=class_weights)
+model.history = model.train(ds_train=ds_train, ds_valid=ds_valid, epochs=20, class_weights=class_weights)
+
+model.save("baseline")
 
 model.plot()
 
