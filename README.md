@@ -5,4 +5,4 @@ The main branch is our baseline
 
 The model-storage branch is our implementation
 
-The vgg16 is our VGG16 implementation
+The vgg16 branch is our VGG16 implementation
